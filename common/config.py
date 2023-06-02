@@ -7,21 +7,25 @@ basedir = Path(__file__).parent.parent.absolute()
 
 
 class DetectorSettings(BaseModel):
-    model: str = 'models/yolov8n.pt'
-    device: str = 'cpu'
-    conf_threshold: float = 0.6
-    iou_threshold: float = 0.45
+    model: str = 'yolov8n.pt'
+    input_width: int = 640
+    input_height: int = 640
+    conf_threshold: float = 0.4
+    iou_threshold: float = 0.7
     max_detections: int = 300
     classes: list[int] = [0, 1, 2, 3, 5, 7, 15, 16, 24, 25, 26, 28, 30, 31,
                           32, 36, 39, 41, 43, 63, 66, 67, 73, 77]
-    identity_threshold_soft: float = 0.3
-    identity_threshold_hard: float = 0.9
+
+    iou_identity_threshold_soft: float = 0.3
+    iou_identity_threshold_hard: float = 0.9
+
     detection_ftl: int = 7
+    detection_ttl: int = 60
 
 
 class EncoderSettings(BaseModel):
     model: str = 'RN50'
-    device: str = 'cpu'
+    embedding_ttl: int = 30 * 24 * 60 * 60
 
 
 class RedisSettings(BaseModel):

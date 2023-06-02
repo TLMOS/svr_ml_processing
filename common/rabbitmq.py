@@ -75,7 +75,7 @@ class PikaSession:
         if not self._input_channel:
             self._input_channel = self._connection.channel()
 
-        self._input_channel.basic_qos(prefetch_count=1)
+        self._input_channel.basic_qos(prefetch_count=2)
         self._input_channel.basic_consume(
             queue=queue,
             on_message_callback=self._on_message,

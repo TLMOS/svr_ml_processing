@@ -1,26 +1,69 @@
+from io import BytesIO
+from PIL import Image
+
 import numpy as np
 
 
-def intersection_over_union(box_a: list, box_b: list) -> float:
+def compute_iou(box, boxes) -> np.ndarray:
     """
-    Calculate intersection over union of two boxes.
+    Compute IoU between a bounding box and a list of bounding boxes.
 
     Parameters:
-    - box_a (list): xyxy coordinates of box A
-    - box_b (list): xyxy coordinates of box B
+    - box (np.ndarray): bounding box (xyxy), shape (4,)
+    - boxes (np.ndarray): bounding boxes, shape (N, 4)
 
     Returns:
-    - iou (float): intersection over union of box A and box B
+    - iou (np.ndarray): IoU, shape (N,)
     """
-    x_a = max(box_a[0], box_b[0])
-    y_a = max(box_a[1], box_b[1])
-    x_b = min(box_a[2], box_b[2])
-    y_b = min(box_a[3], box_b[3])
-    inter_area = max(0, x_b - x_a + 1) * max(0, y_b - y_a + 1)
-    box_a_area = (box_a[2] - box_a[0] + 1) * (box_a[3] - box_a[1] + 1)
-    box_b_area = (box_b[2] - box_b[0] + 1) * (box_b[3] - box_b[1] + 1)
-    iou = inter_area / float(box_a_area + box_b_area - inter_area)
+    xmin = np.maximum(box[0], boxes[:, 0])
+    ymin = np.maximum(box[1], boxes[:, 1])
+    xmax = np.minimum(box[2], boxes[:, 2])
+    ymax = np.minimum(box[3], boxes[:, 3])
+
+    intersection_area = np.maximum(0, xmax - xmin) * np.maximum(0, ymax - ymin)
+
+    box_area = (box[2] - box[0]) * (box[3] - box[1])
+    boxes_area = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    union_area = box_area + boxes_area - intersection_area
+
+    iou = intersection_area / union_area
+
     return iou
+
+
+def xywh2xyxy(boxes: np.ndarray) -> np.ndarray:
+    """
+    Convert bounding box format from (xywh) to (xyxy)
+
+    Parameters:
+    - box (np.ndarray): bounding box in (xywh) format,
+        shape (N, 4) or (4,) for single box
+
+    Returns:
+    - transformed (np.ndarray): bounding box in (xyxy) format
+    """
+    transformed = np.copy(boxes)
+    transformed[..., 0] = boxes[..., 0] - boxes[..., 2] / 2
+    transformed[..., 1] = boxes[..., 1] - boxes[..., 3] / 2
+    transformed[..., 2] = boxes[..., 0] + boxes[..., 2] / 2
+    transformed[..., 3] = boxes[..., 1] + boxes[..., 3] / 2
+    return transformed
+
+
+def image_to_bytes(image: np.ndarray) -> bytes:
+    """
+    Convert image to bytes.
+
+    Parameters:
+    - image (np.ndarray): image to convert
+
+    Returns:
+    - bytes: image as bytes
+    """
+    image = Image.fromarray(image)
+    with BytesIO() as buffer:
+        image.save(buffer, format='JPEG')
+        return buffer.getvalue()
 
 
 def crop_image(image: np.ndarray, box: list) -> np.ndarray:
@@ -35,4 +78,8 @@ def crop_image(image: np.ndarray, box: list) -> np.ndarray:
     - cropped_image (np.ndarray): cropped image
     """
     box = list(map(int, box))
+    box[0] = max(0, box[0])
+    box[1] = max(0, box[1])
+    box[2] = min(image.shape[1], box[2])
+    box[3] = min(image.shape[0], box[3])
     return image[box[1]:box[3], box[0]:box[2]]

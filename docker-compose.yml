@@ -10,7 +10,13 @@ services:
     restart: unless-stopped
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 2
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
   encoder:
     build: ./services/encoder
     env_file: ./.env
@@ -21,3 +27,8 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
