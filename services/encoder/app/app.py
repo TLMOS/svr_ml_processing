@@ -21,7 +21,7 @@ model, preprocess = clip.load(settings.encoder.model, device='cuda')
 @session.on_message
 def on_message(channel: BlockingChannel, method: Basic.Deliver,
                properties: pika.BasicProperties, body: bytes):
-    source_manager_name = properties.headers['source_manager_name']
+    sm_name = properties.headers['sm_name']
     source_id = int(properties.headers['source_id'])
     timestamp = float(properties.headers['timestamp'])
 
@@ -31,14 +31,13 @@ def on_message(channel: BlockingChannel, method: Basic.Deliver,
         image_features = model.encode_image(image).cpu().numpy()[0]
 
     embedding = Embedding(
-        source_manager_name=source_manager_name,
+        sm_name=sm_name,
         source_id=source_id,
         timestamp=timestamp,
         features=image_features.tobytes().hex()
     )
-    embedding.expire(settings.encoder.embedding_ttl)
     embedding.save()
-
+    Embedding.db().expire(embedding.key(), settings.encoder.embedding_ttl)
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 

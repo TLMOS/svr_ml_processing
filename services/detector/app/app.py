@@ -121,7 +121,7 @@ model.to('cuda')
 @session.on_message
 def on_message(channel: BlockingChannel, method: Basic.Deliver,
                properties: pika.BasicProperties, body: bytes):
-    source_manager_name = properties.headers['source_manager_name']
+    sm_name = properties.headers['sm_name']
     source_id = int(properties.headers['source_id'])
     start_time = float(properties.headers['start_time'])
     end_time = float(properties.headers['end_time'])
@@ -135,7 +135,6 @@ def on_message(channel: BlockingChannel, method: Basic.Deliver,
         f.flush()
         results = model(
             f.name,
-            device=settings.detector.device,
             conf=settings.detector.conf_threshold,
             iou=settings.detector.iou_threshold,
             max_det=settings.detector.max_detections,
@@ -185,7 +184,7 @@ def on_message(channel: BlockingChannel, method: Basic.Deliver,
                     properties=pika.BasicProperties(
                         content_type='image/jpeg',
                         headers={
-                            'source_manager_name': source_manager_name,
+                            'sm_name': sm_name,
                             'source_id': str(source_id),
                             'timestamp': str(timestamp),
                         }
