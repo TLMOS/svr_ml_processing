@@ -4,45 +4,78 @@ from PIL import Image
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic
-from redis_om import Migrator
-import numpy as np
-import torch
-import clip
+from transformers import CLIPModel, CLIPProcessor
 
 from common.config import settings
-from common.rabbitmq import PikaSession
-from app.models import Embedding
+from common.clients.amqp import Session
+from common.database import redis
+import app.monitoring as monitoring
 
 
-session = PikaSession()
+session = Session()
+session.set_connection_params(
+    host=str(settings.rabbitmq.host),
+    port=settings.rabbitmq.port,
+    virtual_host=settings.rabbitmq.virtual_host,
+    username=settings.rabbitmq.ml_processing_username,
+    password=settings.rabbitmq.ml_processing_password,
+)
 
-model, preprocess = clip.load(settings.encoder.model, device='cuda')
+
+model = CLIPModel.from_pretrained(settings.encoder.model)
+processor = CLIPProcessor.from_pretrained(settings.encoder.model)
 
 
 @session.on_message
 def on_message(channel: BlockingChannel, method: Basic.Deliver,
                properties: pika.BasicProperties, body: bytes):
-    sm_name = properties.headers['sm_name']
-    source_id = int(properties.headers['source_id'])
-    timestamp = float(properties.headers['timestamp'])
+    monitoring.timer.start('preprocessing')
+
+    source_manager_id = properties.headers['source_manager_id']
+    source_id = properties.headers['source_id']
+    chunk_id = properties.headers['chunk_id']
+    position = properties.headers['position']
+    timestamp = properties.headers['timestamp']
+    box = properties.headers['box']
 
     image = Image.open(BytesIO(body))
-    image = preprocess(image).unsqueeze(0).to('cuda')
-    with torch.no_grad():
-        image_features = model.encode_image(image).cpu().numpy()[0]
+    inputs = processor(images=image, return_tensors='pt', padding=True)
 
-    embedding = Embedding(
-        sm_name=sm_name,
-        source_id=source_id,
-        timestamp=timestamp,
-        features=image_features.astype(np.float32).tobytes().hex()
-    )
-    embedding.save()
-    Embedding.db().expire(embedding.key(), settings.encoder.embedding_ttl)
+    monitoring.processing_duration_seconds.labels('preprocessing')\
+        .observe(monitoring.timer.get('preprocessing'))
+    monitoring.timer.start('inference')
+
+    image_features = model.get_image_features(**inputs)
+    image_features = image_features.detach().cpu().numpy()
+    encoded = image_features[0].astype('float32').tobytes()
+
+    monitoring.processing_duration_seconds.labels('inference')\
+        .observe(monitoring.timer.get('inference'))
+    monitoring.timer.start('publishing')
+
+    frame = {
+        'source_manager_id': source_manager_id,
+        'source_id': source_id,
+        'chunk_id': chunk_id,
+        'position': position,
+        'timestamp': timestamp,
+        'embedding': encoded,
+        'box': box,
+    }
+    key = f'frame:{redis.incr("frame_index")}'
+    redis.hset(key, mapping=frame)
+    redis.expire(key, settings.encoder.embedding_ttl)
+
     channel.basic_ack(delivery_tag=method.delivery_tag)
+
+    monitoring.processing_duration_seconds.labels('publishing')\
+        .observe(monitoring.timer.get('publishing'))
+    monitoring.messages_processed_total.inc()
+    monitoring.push_metrics()
 
 
 def main():
-    Migrator().run()
-    session.startup()
-    session.consume(settings.rabbitmq.frame_crops_queue)
+    session.start_consuming(
+        settings.rabbitmq.frame_crops_queue,
+        prefetch_count=settings.rabbitmq.prefetch_count
+    )

@@ -1,8 +1,7 @@
-.vscode
 __pycache__
+.vscode
 env
-vscode
-log
 **.ipynb
 
-models/
+*.local*
+models

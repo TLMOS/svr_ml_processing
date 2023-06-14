@@ -1,15 +1,12 @@
-FROM pokroy/python-cuda:3.10-12.1
-
-RUN apt-get install git -y
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 
 WORKDIR /home
 
-COPY ./requirements.txt .
+COPY ./services/encoder/requirements.txt .
 
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-RUN pip3 install git+https://github.com/openai/CLIP.git
-
-COPY . .
+COPY ./common ./common
+COPY ./services/encoder .
 
 CMD ["python3", "-m", "app"]

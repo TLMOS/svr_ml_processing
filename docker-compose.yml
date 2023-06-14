@@ -1,13 +1,25 @@
-version: "3.9"
+version: '3.9'
+
+volumes:
+  huggingface_cache:
+    external: false
 
 services:
+  pushgateway:
+    image: prom/pushgateway:v1.6.0
+    container_name: svr_mp_pushgateway
+    restart: unless-stopped
+    ports:
+      - 9090:9091
+
   detector:
-    build: ./services/detector
+    build:
+      context: .
+      dockerfile: ./services/detector/Dockerfile
+    restart: unless-stopped
     env_file: ./.env
     volumes:
-      - ./common:/home/common
       - ./models:/home/models
-    restart: unless-stopped
     deploy:
       mode: replicated
       replicas: 2
@@ -18,12 +30,13 @@ services:
               capabilities: [gpu]
 
   encoder:
-    build: ./services/encoder
+    build:
+      context: .
+      dockerfile: ./services/encoder/Dockerfile
+    restart: unless-stopped
     env_file: ./.env
     volumes:
-      - ./common:/home/common
-      - ./models:/home/models
-    restart: unless-stopped
+      - huggingface_cache:/root/.cache/huggingface/hub/
     deploy:
       mode: replicated
       replicas: 1
