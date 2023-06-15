@@ -18,10 +18,10 @@ class DetectorSettings(BaseModel):
                                     'yolov8l.pt', 'yolov8x.pt']
     input_width: int = Field(640, ge=28, le=1920)
     input_height: int = Field(480, ge=28, le=1080)
-    conf_threshold: float = Field(0.35, ge=0, le=1)
+    conf_threshold: float = Field(0.4, ge=0, le=1)
     iou_threshold: float = Field(0.7, ge=0, le=1)
     max_detections: PositiveInt = 100
-    min_box_size: PositiveInt = 36
+    min_box_size: PositiveInt = 48
     agnostic_nms: bool = True
     classes: list[int] = [0, 1, 2, 3, 5, 7, 15, 16, 24, 25, 26, 28, 30, 31,
                           32, 36, 39, 41, 43, 63, 66, 67, 73, 77]
@@ -30,9 +30,9 @@ class DetectorSettings(BaseModel):
         0: [1, 3, 24, 25, 26, 28, 30, 31, 32, 36,
             39, 41, 43, 63, 66, 67, 73, 77]
     }
-    ioa_class_hierarchy_threshold: float = Field(0.5, ge=0, le=1)
+    ioa_class_hierarchy_threshold: float = Field(0.3, ge=0, le=1)
 
-    iou_identity_threshold_soft: float = Field(0.6, ge=0, le=1)
+    iou_identity_threshold_soft: float = Field(0.45, ge=0, le=1)
     iou_identity_threshold_hard: float = Field(0.9, ge=0, le=1)
 
     detection_ftl: PositiveInt = 7

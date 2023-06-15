@@ -73,3 +73,11 @@ detection_labels = Histogram(
     buckets=settings.detector.classes,
     registry=registry,
 )
+
+chunk_fps = Summary(
+    name='chunk_fps',
+    documentation='Frames per second in a chunk',
+    namespace=NAMESPACE,
+    labelnames=[],
+    registry=registry,
+)

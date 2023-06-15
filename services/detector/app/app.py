@@ -1,6 +1,7 @@
 import tempfile
 
 import numpy as np
+import torch
 from ultralytics import YOLO
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
@@ -32,8 +33,9 @@ session.set_connection_params(
     password=settings.rabbitmq.ml_processing_password,
 )
 
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 model = YOLO(settings.detector.model)
-model.to('cuda')
+model.to(device)
 
 
 @session.on_message
@@ -45,6 +47,8 @@ def on_message(channel: BlockingChannel, method: Basic.Deliver,
     frame_count = int(properties.headers['frame_count'])
     start_time = float(properties.headers['start_time'])
     end_time = float(properties.headers['end_time'])
+
+    monitoring.chunk_fps.observe(frame_count / (end_time - start_time))
 
     # Get previous detections from Redis, redis acts as unified state storage
     # for all detector instances

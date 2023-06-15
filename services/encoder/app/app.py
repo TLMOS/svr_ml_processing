@@ -4,6 +4,7 @@ from PIL import Image
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic
+import torch
 from transformers import CLIPModel, CLIPProcessor
 
 from common.config import settings
@@ -21,8 +22,9 @@ session.set_connection_params(
     password=settings.rabbitmq.ml_processing_password,
 )
 
-
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 model = CLIPModel.from_pretrained(settings.encoder.model)
+model = model.to(device)
 processor = CLIPProcessor.from_pretrained(settings.encoder.model)
 
 
@@ -40,6 +42,7 @@ def on_message(channel: BlockingChannel, method: Basic.Deliver,
 
     image = Image.open(BytesIO(body))
     inputs = processor(images=image, return_tensors='pt', padding=True)
+    inputs = inputs.to(device)
 
     monitoring.processing_duration_seconds.labels('preprocessing')\
         .observe(monitoring.timer.get('preprocessing'))
