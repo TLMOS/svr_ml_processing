@@ -10,7 +10,7 @@ services:
     container_name: svr_mp_pushgateway
     restart: unless-stopped
     ports:
-      - 9090:9091
+      - 9091:9091
 
   detector:
     build:
