@@ -22,7 +22,7 @@ services:
       - ./models:/home/models
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       resources:
         reservations:
           devices:
