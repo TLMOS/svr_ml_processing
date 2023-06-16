@@ -35,7 +35,7 @@ class DetectorSettings(BaseModel):
     iou_identity_threshold_soft: float = Field(0.45, ge=0, le=1)
     iou_identity_threshold_hard: float = Field(0.85, ge=0, le=1)
 
-    detection_ftl: PositiveInt = 2
+    detection_ftl: PositiveInt = 3
     detection_ttl: PositiveInt = 60
 
 
