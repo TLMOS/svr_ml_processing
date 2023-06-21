@@ -66,11 +66,17 @@ class RabbitMQSettings(BaseModel):
     prefetch_count: PositiveInt = 3
 
 
+class MonitoringSettings(BaseModel):
+    url: str = 'pushgateway:9091'
+    send_metrics: bool = True
+
+
 class Settings(BaseSettings):
     detector: DetectorSettings = DetectorSettings()
     encoder: EncoderSettings = EncoderSettings()
     redis: RedisSettings = RedisSettings()
     rabbitmq: RabbitMQSettings = RabbitMQSettings()
+    monitoring: MonitoringSettings = MonitoringSettings()
 
     class Config:
         env_nested_delimiter = '__'

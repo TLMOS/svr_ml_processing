@@ -31,11 +31,12 @@ timer = Timer()
 
 
 def push_metrics():
-    push_to_gateway(
-        'pushgateway:9091',
-        job=HOSTNAME,
-        registry=registry,
-    )
+    if settings.monitoring.send_metrics:
+        push_to_gateway(
+            settings.monitoring.url,
+            job=HOSTNAME,
+            registry=registry,
+        )
 
 
 registry = CollectorRegistry()

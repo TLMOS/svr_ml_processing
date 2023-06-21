@@ -8,6 +8,8 @@ from prometheus_client import (
     Counter,
 )
 
+from common.config import settings
+
 
 HOSTNAME = os.environ['HOSTNAME']
 NAMESPACE = 'ml_processing_encoder'
@@ -28,11 +30,13 @@ timer = Timer()
 
 
 def push_metrics():
-    push_to_gateway(
-        'pushgateway:9091',
-        job=HOSTNAME,
-        registry=registry,
-    )
+    if settings.monitoring.send_metrics:
+        push_to_gateway(
+            settings.monitoring.url,
+            job=HOSTNAME,
+            registry=registry,
+        )
+
 
 
 registry = CollectorRegistry()
